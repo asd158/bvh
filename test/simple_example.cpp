@@ -7,12 +7,11 @@
 #include <bvh/v2/executor.h>
 #include <bvh/v2/stack.h>
 #include <bvh/v2/tri.h>
-
 #include <iostream>
 
 static int readbyte_from_file(const std::string &path,
-                       char *inputBuff,
-                       int inputBuffSize) {
+                              char *inputBuff,
+                              int inputBuffSize) {
     if (path.empty() || inputBuff == nullptr || inputBuffSize <= 0) {
         return -1;
     }
@@ -37,197 +36,209 @@ static int readbyte_from_file(const std::string &path,
     fclose(readFile);
     return total;
 }
+
 #include <chrono>
 
-class StopWatch
-{
+class StopWatch {
 public:
     void Start();
     void Stop();
     [[nodiscard]] long long EclipsedMillSecond() const;
 private:
-    bool _isStart{false};
-    long long _finalFS{-1};
+    bool                                  _isStart{false};
+    long long                             _finalFS{-1};
     std::chrono::steady_clock::time_point _start;
     std::chrono::steady_clock::time_point _end;
 };
 
-void StopWatch::Start()
-{
-    if (_isStart)
-    {
+void StopWatch::Start() {
+    if (_isStart) {
         return;
     }
     _isStart = true;
-    _start = std::chrono::steady_clock::now();
+    _start   = std::chrono::steady_clock::now();
 }
 
-void StopWatch::Stop()
-{
-    if (!_isStart)
-    {
+void StopWatch::Stop() {
+    if (!_isStart) {
         return;
     }
     _isStart = false;
-    _end = std::chrono::steady_clock::now();
+    _end     = std::chrono::steady_clock::now();
     _finalFS = std::chrono::duration_cast<std::chrono::milliseconds>(_end - _start).count();
 }
 
-
-long long StopWatch::EclipsedMillSecond() const
-{
-    if (!_isStart)
-    {
+long long StopWatch::EclipsedMillSecond() const {
+    if (!_isStart) {
         return _finalFS;
     }
     auto now = std::chrono::steady_clock::now();
     return std::chrono::duration_cast<std::chrono::milliseconds>(now - _start).count();
 }
-
-
-
-using Scalar  = float;
-using Vec3    = bvh::v2::Vec<Scalar, 3>;
-using BBox    = bvh::v2::BBox<Scalar, 3>;
-using Tri     = bvh::v2::Tri<Scalar, 3>;
-using Node    = bvh::v2::Node<Scalar, 3>;
-using Bvh     = bvh::v2::Bvh<Node>;
-using Ray     = bvh::v2::Ray<Scalar, 3>;
-
+using Scalar = float;
+using Vec3 = bvh::v2::Vec<Scalar, 3>;
+using BBox = bvh::v2::BBox<Scalar, 3>;
+using Tri = bvh::v2::Tri<Scalar, 3>;
+using Node = bvh::v2::Node<Scalar, 3>;
+using Bvh = bvh::v2::Bvh<Node>;
+using Ray = bvh::v2::Ray<Scalar, 3>;
 using PrecomputedTri = bvh::v2::PrecomputedTri<Scalar>;
-
 int main() {
-
     StopWatch build;
     build.Start();
     // This is the original data, which may come in some other data type/structure.
-    std::vector<Tri> tris;
-//    tris.emplace_back(
-//            Vec3( 1.0, -1.0, 1.0),
-//            Vec3( 1.0,  1.0, 1.0),
-//            Vec3(-1.0,  1.0, 1.0)
-//    );
-//    tris.emplace_back(
-//            Vec3( 1.0, -1.0, 1.0),
-//            Vec3(-1.0, -1.0, 1.0),
-//            Vec3(-1.0,  1.0, 1.0)
-//    );
-    std::vector<float> buffPri(1024 * 1024,
-                               0);
-    int validSize = readbyte_from_file("../../test/headm_pri.b",
-                                       reinterpret_cast<char *>(buffPri.data()),
-                                       buffPri.capacity());
-    if (validSize > 0) {
-        buffPri.resize(validSize/4);
-        std::vector<ushort> buffInd(1024 * 1024,
+    std::vector<Tri>          tris;
+    if (true) {
+        tris.emplace_back(
+                Vec3(1.0,
+                     -2.0,
+                     1.0),
+                Vec3(1.0,
+                     1.0,
+                     1.0),
+                Vec3(-2.0,
+                     1.0,
+                     1.0)
+        );
+    }
+    else {
+        std::vector<float> buffPri(1024 * 1024,
                                    0);
-        validSize = readbyte_from_file("../../test/headm_ind.b",
-                                       reinterpret_cast<char *>(buffInd.data()),
-                                       buffInd.capacity());
-
-        if(validSize>0){
-            buffInd.resize(validSize/2);
-            for (int i = 0;
-                 i < buffInd.size()/3;
-                 ++i) {
-                int idx[3] ={buffInd[i*3+0],buffInd[i*3+1],buffInd[i*3+2]};
-//                std::cout << "-> " << idx[0] << " -> " << idx[1] << "-> " << idx[2] << std::endl;
-                tris.emplace_back(
-                        Vec3(buffPri[idx[0] * 3],
-                             buffPri[idx[0] * 3+1],
-                             buffPri[idx[0] * 3+2]),
-                        Vec3(buffPri[idx[1] * 3],
-                             buffPri[idx[1] * 3+1],
-                             buffPri[idx[1] * 3+2]),
-                        Vec3(buffPri[idx[2] * 3],
-                             buffPri[idx[2] * 3+1],
-                             buffPri[idx[2] * 3+2])
-                );
+        int                validSize = readbyte_from_file("../../test/headm_pri.b",
+                                                          reinterpret_cast<char *>(buffPri.data()),
+                                                          buffPri.capacity());
+        if (validSize > 0) {
+            buffPri.resize(validSize / 4);
+            std::vector<ushort> buffInd(1024 * 1024,
+                                        0);
+            validSize = readbyte_from_file("../../test/headm_ind.b",
+                                           reinterpret_cast<char *>(buffInd.data()),
+                                           buffInd.capacity());
+            if (validSize > 0) {
+                buffInd.resize(validSize / 2);
+                for (int i = 0;
+                     i < buffInd.size() / 3;
+                     ++i) {
+                    int idx[3] = {buffInd[i * 3 + 0], buffInd[i * 3 + 1], buffInd[i * 3 + 2]};
+                    tris.emplace_back(
+                            Vec3(buffPri[idx[0] * 3],
+                                 buffPri[idx[0] * 3 + 1],
+                                 buffPri[idx[0] * 3 + 2]),
+                            Vec3(buffPri[idx[1] * 3],
+                                 buffPri[idx[1] * 3 + 1],
+                                 buffPri[idx[1] * 3 + 2]),
+                            Vec3(buffPri[idx[2] * 3],
+                                 buffPri[idx[2] * 3 + 1],
+                                 buffPri[idx[2] * 3 + 2])
+                    );
+                }
             }
-
+            else {
+                abort();
+            }
         }
-        else{
+        else {
             abort();
         }
     }
-    else{
-        abort();
-    }
-
-    bvh::v2::ThreadPool thread_pool;
+    bvh::v2::ThreadPool       thread_pool;
     bvh::v2::ParallelExecutor executor(thread_pool);
 
     // Get triangle centers and bounding boxes (required for BVH builder)
-    std::vector<BBox> bboxes(tris.size());
-    std::vector<Vec3> centers(tris.size());
-    executor.for_each(0, tris.size(), [&] (size_t begin, size_t end) {
-        for (size_t i = begin; i < end; ++i) {
-            bboxes[i]  = tris[i].get_bbox();
-            centers[i] = tris[i].get_center();
-        }
-    });
-
+    std::vector<BBox>                              bboxes(tris.size());
+    std::vector<Vec3>                              centers(tris.size());
+    executor.for_each(0,
+                      tris.size(),
+                      [&](size_t begin,
+                          size_t end) {
+                          for (size_t i = begin;
+                               i < end;
+                               ++i) {
+                              bboxes[i]  = tris[i].get_bbox();
+                              centers[i] = tris[i].get_center();
+                          }
+                      });
     typename bvh::v2::DefaultBuilder<Node>::Config config;
     config.quality = bvh::v2::DefaultBuilder<Node>::Quality::Low;
-    auto bvh = bvh::v2::DefaultBuilder<Node>::build(thread_pool, bboxes, centers, config);
+    auto bvh = bvh::v2::DefaultBuilder<Node>::build(thread_pool,
+                                                    bboxes,
+                                                    centers,
+                                                    config);
     build.Stop();
-
-
-
-    static constexpr bool should_permute = true;
+    static constexpr bool       should_permute = true;
     // This precomputes some data to speed up traversal further.
     std::vector<PrecomputedTri> precomputed_tris(tris.size());
-    executor.for_each(0, tris.size(), [&] (size_t begin, size_t end) {
-        for (size_t i = begin; i < end; ++i) {
-            auto j = should_permute ? bvh.prim_ids[i] : i;
-            precomputed_tris[i] = tris[j];
-        }
-    });
-    std::cout << "build time:->" << build.EclipsedMillSecond() <<std::endl;
+    executor.for_each(0,
+                      tris.size(),
+                      [&](size_t begin,
+                          size_t end) {
+                          for (size_t i = begin;
+                               i < end;
+                               ++i) {
+                              auto j = should_permute ? bvh.prim_ids[i] : i;
+                              precomputed_tris[i] = tris[j];
+                          }
+                      });
+    std::cout << "build time:->" << build.EclipsedMillSecond() << std::endl;
     ////////////////////////////////////////////////////////////////////////////////////////////////
     ////////////////////////////////////////////////////////////////////////////////////////////////
     StopWatch runtime;
     runtime.Start();
     for (int i = 0;
-         i < 1000;
+         i < 1;
          ++i) {
-        auto ray = Ray {
-                Vec3(0., 0., 0.), // Ray origin
-                Vec3(0., 0., 1), // Ray direction
+        auto ray = Ray{
+                Vec3(0.,
+                     0.,
+                     0), // Ray origin
+                Vec3(0.,
+                     0.,
+                     1), // Ray direction
                 0.,               // Minimum intersection distance
-                5.              // Maximum intersection distance
+                2.              // Maximum intersection distance
         };
 
-        static constexpr size_t invalid_id = std::numeric_limits<size_t>::max();
-        static constexpr size_t stack_size = 64;
-        static constexpr bool use_robust_traversal = false;
+        static constexpr size_t invalid_id           = std::numeric_limits<size_t>::max();
+        static constexpr size_t stack_size           = 64;
+        static constexpr bool   use_robust_traversal = false;
 
-        auto prim_id = invalid_id;
-        Scalar u, v;
+        auto   prim_id = invalid_id;
+        Scalar u, v, w;
 
         // Traverse the BVH and get the u, v coordinates of the closest intersection.
         bvh::v2::SmallStack<Bvh::Index, stack_size> stack;
-        bvh.intersect<false, use_robust_traversal>(ray, bvh.get_root().index, stack,
-                                                   [&] (size_t begin, size_t end) {
-                                                       for (size_t i = begin; i < end; ++i) {
-                                                           size_t j = should_permute ? i : bvh.prim_ids[i];
+        bvh.intersect<false, use_robust_traversal>(ray,
+                                                   bvh.get_root().index,
+                                                   stack,
+                                                   [&](size_t begin,
+                                                       size_t end) {
+                                                       for (size_t i = begin;
+                                                            i < end;
+                                                            ++i) {
+                                                           size_t   j   = should_permute ? i : bvh.prim_ids[i];
                                                            if (auto hit = precomputed_tris[j].intersect(ray)) {
                                                                prim_id = i;
-                                                               std::tie(u, v) = *hit;
+                                                               std::tie(u,
+                                                                        v,
+                                                                        w) = *hit;
                                                            }
                                                        }
                                                        return prim_id != invalid_id;
                                                    });
         if (prim_id != invalid_id) {
+            auto p0 = precomputed_tris[prim_id].p0;
+            auto p1 = precomputed_tris[prim_id].p0 - precomputed_tris[prim_id].e1;
+            auto p2 = precomputed_tris[prim_id].e2 + precomputed_tris[prim_id].p0;
             std::cout
                     << "Intersection found\n"
-                    << "  primitive: " << prim_id << "x:" << precomputed_tris[prim_id].p0[0] << "\n"
-                    << "  distance: " << ray.tmax << "\n"
-                    << "  barycentric coords.: " << u << ", " << v << std::endl;
-        } else {
+                    << "  primitive: " << prim_id << " -> \n[" << p0[0] << "," << p0[1] << "," << p0[2] << "]\n[" << p1[0] << "," << p1[1] << "," << p1[2] << "]\n[" << p2[0] << "," << p2[1] << "," << p2[2] << "]\n"
+                    << "  distance: " << ray.tmax << ", " << ray.tmin << "\n"
+                    << "  barycentric coords.: " << u << ", " << v << ", " << w << std::endl;
+        }
+        else {
             std::cout << "No intersection found" << std::endl;
         }
     }
     runtime.Stop();
-    std::cout << "run time:->" << runtime.EclipsedMillSecond() <<std::endl;
+    std::cout << "run time:->" << runtime.EclipsedMillSecond() << std::endl;
 }

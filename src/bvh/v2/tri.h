@@ -48,13 +48,13 @@ struct PrecomputedTri {
     /// intersects the triangle, otherwise returns nothing. The distance at which the ray intersects
     /// the triangle is set in `ray.tmax`. The tolerance can be adjusted to account for numerical
     /// precision issues.
-    BVH_ALWAYS_INLINE std::optional<std::pair<T, T>> intersect(
+    BVH_ALWAYS_INLINE std::optional<std::tuple<T, T, T>> intersect(
         Ray<T, 3>& ray,
         T tolerance = -std::numeric_limits<T>::epsilon()) const;
 };
 
 template <typename T>
-std::optional<std::pair<T, T>> PrecomputedTri<T>::intersect(Ray<T, 3>& ray, T tolerance) const {
+std::optional<std::tuple<T, T, T>> PrecomputedTri<T>::intersect(Ray<T, 3>& ray, T tolerance) const {
     auto c = p0 - ray.org;
     auto r = cross(ray.dir, c);
     auto inv_det = static_cast<T>(1.) / dot(n, ray.dir);
@@ -69,7 +69,7 @@ std::optional<std::pair<T, T>> PrecomputedTri<T>::intersect(Ray<T, 3>& ray, T to
         auto t = dot(n, c) * inv_det;
         if (t >= ray.tmin && t <= ray.tmax) {
             ray.tmax = t;
-            return std::make_optional(std::pair<T, T> { u, v });
+            return std::make_optional(std::tuple<T, T, T> { u, v ,w });
         }
     }
 
