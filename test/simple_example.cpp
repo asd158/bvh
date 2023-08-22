@@ -88,16 +88,16 @@ int main() {
     std::vector<Tri> tris;
     if (false) {
         tris.emplace_back(
-                //p0点重复
-                Vec3(0.0,
-                     0.0,
-                     1.0),
-                Vec3(1.0,
-                     1.0,
-                     1.0),
-                Vec3(-1.0,
-                     1.0,
-                     1.0)
+//                //p0点重复
+//                Vec3(0.0,
+//                     0.0,
+//                     1.0),
+//                Vec3(1.0,
+//                     1.0,
+//                     1.0),
+//                Vec3(-1.0,
+//                     1.0,
+//                     1.0)
 
 //                //p1点重复
 //                Vec3(1.0,
@@ -120,6 +120,18 @@ int main() {
 //                Vec3(0.0,
 //                     0.0,
 //                     1.0)
+
+
+                //p0-p1边上
+                Vec3(-2.0,
+                     -2.0,
+                     1.0),
+                Vec3(1.0,
+                     1.0,
+                     1.0),
+                Vec3(-1.0,
+                     1.0,
+                     1.0)
         );
     }
     else {
@@ -214,7 +226,7 @@ int main() {
                 Vec3(0., 0., 0.), // Ray origin
                 Vec3(0., 0., 1), // Ray direction
                 0.,               // Minimum intersection distance
-                5.              // Maximum intersection distance
+                0.0001              // Maximum intersection distance
         };
 
         static constexpr size_t invalid_id           = std::numeric_limits<size_t>::max();
@@ -257,16 +269,15 @@ int main() {
             }
             auto                    v1 = p0 - q;
             auto                    v2 = p0 - q_bc;
-            float                   a0 = dot(v1, v1) / dot(v2, v2);
+            float                   a0 = sqrt(dot(v1, v1) / dot(v2, v2));
             v1 = p1 - q_bc;
             v2 = p1 - p2;
-            float a1 = dot(v1, v1) / dot(v2, v2);
+            float a1 = sqrt(dot(v1, v1) / dot(v2, v2));
             std::cout
                     << "Intersection found\n"
                     << "  primitive: " << prim_id << "\n"
                     << "  distance: " << ray.tmax << ", " << ray.tmin << "\n"
                     << "  重心: " << u << ", " << v << ", " << w << std::endl
-                    << "  P0   坐标: " << p0[0] << "," << p0[1] << "," << p0[2] << std::endl
                     << "  P1   坐标: " << p1[0] << "," << p1[1] << "," << p1[2] << std::endl
                     << "  P2   坐标: " << p2[0] << "," << p2[1] << "," << p2[2] << std::endl
                     << "  重心q  坐标: " << q[0] << "," << q[1] << "," << q[2] << std::endl
