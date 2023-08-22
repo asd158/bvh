@@ -23,7 +23,7 @@ struct Ray {
         const Vec<T, N>& dir,
         T tmin = 0,
         T tmax = std::numeric_limits<T>::max())
-        : org(org), dir(dir), tmin(tmin), tmax(tmax)
+        : org(org), dir(normalize(dir)), tmin(tmin), tmax(tmax)
     {}
 
     template <bool SafeInverse = false>

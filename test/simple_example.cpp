@@ -3,8 +3,6 @@
 #include <bvh/v2/ray.h>
 #include <bvh/v2/node.h>
 #include <bvh/v2/default_builder.h>
-#include <bvh/v2/thread_pool.h>
-#include <bvh/v2/executor.h>
 #include <bvh/v2/stack.h>
 #include <bvh/v2/tri.h>
 #include <iostream>
@@ -87,18 +85,41 @@ int main() {
     StopWatch build;
     build.Start();
     // This is the original data, which may come in some other data type/structure.
-    std::vector<Tri>          tris;
-    if (true) {
+    std::vector<Tri> tris;
+    if (false) {
         tris.emplace_back(
-                Vec3(1.0,
-                     -2.0,
+                //p0点重复
+                Vec3(0.0,
+                     0.0,
                      1.0),
                 Vec3(1.0,
                      1.0,
                      1.0),
-                Vec3(-2.0,
+                Vec3(-1.0,
                      1.0,
                      1.0)
+
+//                //p1点重复
+//                Vec3(1.0,
+//                     -1.0,
+//                     1.0),
+//                Vec3(0.0,
+//                     0.0,
+//                     1.0),
+//                Vec3(-1.0,
+//                     -1.0,
+//                     1.0)
+
+//                //p2点重复
+//                Vec3(1.0,
+//                     -1.0,
+//                     1.0),
+//                Vec3(1.0,
+//                     1.0,
+//                     1.0),
+//                Vec3(0.0,
+//                     0.0,
+//                     1.0)
         );
     }
     else {
@@ -141,6 +162,8 @@ int main() {
             abort();
         }
     }
+
+    // Get triangle centers and bounding boxes (required for BVH builder)
     bvh::v2::ThreadPool       thread_pool;
     bvh::v2::ParallelExecutor executor(thread_pool);
 
@@ -188,14 +211,10 @@ int main() {
          i < 1;
          ++i) {
         auto ray = Ray{
-                Vec3(0.,
-                     0.,
-                     0), // Ray origin
-                Vec3(0.,
-                     0.,
-                     1), // Ray direction
+                Vec3(0., 0., 0.), // Ray origin
+                Vec3(0., 0., 1), // Ray direction
                 0.,               // Minimum intersection distance
-                2.              // Maximum intersection distance
+                5.              // Maximum intersection distance
         };
 
         static constexpr size_t invalid_id           = std::numeric_limits<size_t>::max();
@@ -226,14 +245,33 @@ int main() {
                                                        return prim_id != invalid_id;
                                                    });
         if (prim_id != invalid_id) {
-            auto p0 = precomputed_tris[prim_id].p0;
-            auto p1 = precomputed_tris[prim_id].p0 - precomputed_tris[prim_id].e1;
-            auto p2 = precomputed_tris[prim_id].e2 + precomputed_tris[prim_id].p0;
+            auto                    p0 = precomputed_tris[prim_id].p0;
+            auto                    p1 = precomputed_tris[prim_id].p0 - precomputed_tris[prim_id].e1;
+            auto                    p2 = precomputed_tris[prim_id].e2 + precomputed_tris[prim_id].p0;
+            bvh::v2::Vec<Scalar, 3> q{}, q_bc{};
+            for (int                j  = 0;
+                 j < 3;
+                 ++j) {
+                q[j]    = (u * p1[j] + v * p2[j] + w * p0[j]);
+                q_bc[j] = p1[j] + v / (u + v) * (p2[j] - p1[j]);
+            }
+            auto                    v1 = p0 - q;
+            auto                    v2 = p0 - q_bc;
+            float                   a0 = dot(v1, v1) / dot(v2, v2);
+            v1 = p1 - q_bc;
+            v2 = p1 - p2;
+            float a1 = dot(v1, v1) / dot(v2, v2);
             std::cout
                     << "Intersection found\n"
-                    << "  primitive: " << prim_id << " -> \n[" << p0[0] << "," << p0[1] << "," << p0[2] << "]\n[" << p1[0] << "," << p1[1] << "," << p1[2] << "]\n[" << p2[0] << "," << p2[1] << "," << p2[2] << "]\n"
+                    << "  primitive: " << prim_id << "\n"
                     << "  distance: " << ray.tmax << ", " << ray.tmin << "\n"
-                    << "  barycentric coords.: " << u << ", " << v << ", " << w << std::endl;
+                    << "  重心: " << u << ", " << v << ", " << w << std::endl
+                    << "  P0   坐标: " << p0[0] << "," << p0[1] << "," << p0[2] << std::endl
+                    << "  P1   坐标: " << p1[0] << "," << p1[1] << "," << p1[2] << std::endl
+                    << "  P2   坐标: " << p2[0] << "," << p2[1] << "," << p2[2] << std::endl
+                    << "  重心q  坐标: " << q[0] << "," << q[1] << "," << q[2] << std::endl
+                    << "  延长线交点q_bc: " << q_bc[0] << "," << q_bc[1] << "," << q_bc[2] << std::endl
+                    << "  比例系数: " << a0 << ", " << a1 << std::endl;
         }
         else {
             std::cout << "No intersection found" << std::endl;
